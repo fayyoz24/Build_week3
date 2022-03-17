@@ -3,7 +3,7 @@ from torch.optim import lr_scheduler
 
 class LRScheduler:
     """
-    Check ig the validation loss does not decrease for a given number of epochs (patience),
+    Check if the validation loss does not decrease for a given number of epochs (patience),
     the decrease the learning rate by a given factor
     """
 
