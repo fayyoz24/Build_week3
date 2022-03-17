@@ -1,45 +1,78 @@
-#  Creating database
-# It captures images and stores them in datasets
-# folder under the folder name of sub_data
+
+from tkinter import Canvas
+from torchvision.transforms import ToPILImage, Grayscale, ToTensor, Resize
+from torchvision import transforms
+import torch.nn.functional as F
+import numpy as np
+import cv2
+import model 
+import torch 
+
 import cv2, sys, numpy, os
 haar_file = './haarcascade_frontalface_default.xml'
- 
-# All the faces data will be
-#  present this folder
-datasets = './train' 
- 
- 
-# These are sub data sets of folder,
-# for my faces I've used my name you can
-# change the label here
-sub_data = 'vivek'    
- 
-path = os.path.join(datasets, sub_data)
-if not os.path.isdir(path):
-    os.mkdir(path)
- 
-# defining the size of images
-(width, height) = (48, 48)   
- 
-#'0' is used for my webcam,
-# if you've any other camera
-#  attached use '1' like this
+
 face_cascade = cv2.CascadeClassifier(haar_file)
-webcam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-# camera = cv2.VideoCapture(camera_port, )
+
+emotion_dict = {
+    0: "Angry",
+    1: "Disgust",
+    2: "Fear",
+    3: "Happy",
+    4: "Neutral"
+}
+
+modul = model.Emotion(num_of_channels=1,num_of_classes= 5)
+modul.load_state_dict(torch.load('./model.pth'))
+modul.eval()
+
+data_transform = transforms.Compose([
+    ToPILImage(),
+    Grayscale(num_output_channels=1),
+    Resize((48,48)),
+    ToTensor()
+])
+
+vs = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+
+while True:
+    (grabbed, img) = vs.read()
+   
+    # Read the frame
  
-# The program loops until it has 30 images of the face.
-count = 1
-while count < 1100:
-    (_, im) = webcam.read()
-    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 4)
+    # Convert to grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Detect the faces
+    cavas = np.zeros((300, 300,3), dtype='uint8')
+    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    # Draw the rectangle around each face
     for (x, y, w, h) in faces:
-        cv2.rectangle(im, (x, y), (x + w, y + h), (255, 0, 0), 2)
-        face = gray[y:y + h, x:x + w]
-        face_resize = cv2.resize(face, (width, height))
-        # cv2.imwrite('% s/% s.png' % (path, count), face_resize)
-    count += 1
-     
-    cv2.imshow('OpenCV', im)
-cv2.destroyAllWindows()
+        
+
+        frame = img.copy()
+        frame = data_transform(frame)
+        frame = frame.unsqueeze(0)
+        predictions = modul(frame)
+        prob = F.softmax(predictions, dim=1)
+        top_p, top_class = prob.topk(1, dim=1)
+        top_p, top_class = top_p.item(), top_class.item()
+        emotion_prob = [p.item() for p in prob[0]]
+        emotion_value = emotion_dict.values()
+        for (i, (emotion, prob)) in enumerate(zip(emotion_value, emotion_prob)):
+            prob_next = f'{emotion}: {prob * 100:.2f}%'
+            width = int(prob*300)
+            cv2.rectangle(cavas, (5,(i*50)+5), (width, (i*50)+50), (0,0,255), -1)
+            cv2.putText(cavas, prob_next, (5, (i*50)+30),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2)
+        # Display
+
+        face_emotion = emotion_dict[top_class]
+        face_text = f'{face_emotion}:{top_p*100:.2f}%'
+        cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
+        cv2.putText(img, face_text, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
+        1.05, (0,255,0),2)
+    cv2.imshow('IMAGE', img)
+    
+    # Stop if escape key is pressed
+    k = cv2.waitKey(1) & 0xff
+    if k==ord("q"):
+        break
