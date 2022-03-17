@@ -10,16 +10,27 @@ import torch
 import argparse
 
 
-cascade = './haarcascade_frontalface_default.xml'
-# print(cascade)
-face_classifier = cv2.CascadeClassifier(cascade)
 parser = argparse.ArgumentParser()
 model = Emotion(num_of_channels=1, num_of_classes=5)
 model.load_state_dict(torch.load('./model.pth'))
 model.eval()
 
+
+
+
+
+
+
+
+
+cascade = './haarcascade_frontalface_default.xml'
+# print(cascade)
+face_classifier = cv2.CascadeClassifier(cascade)
+
+
+
 emotion_labels = ['Angry','Disgust','Fear','Happy','Neutral', 'Sad', 'Surprise']
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 while True:
     _, frame = cap.read()
@@ -34,13 +45,25 @@ while True:
 
 
 
+# transform = transforms.ToTensor()
+
+# # Convert the image to PyTorch tensor
+# tensor = transform(image)
+
+# # print the converted image tensor
+# print(tensor)
+
+
+
         if np.sum([roi_gray])!=0:
             roi = roi_gray
             roi = roi_gray.astype('float')/255.0
-            roi = cv2.imread("abc.tiff")
+            transform = transforms.ToTensor()
+            roi = transform(roi)
+            # roi = ToTensor(roi)
             roi = np.expand_dims(roi,axis=0)
 
-            prediction = model.forward(roi)
+            prediction = model.forward(roi)[0]
             label=emotion_labels[prediction.argmax()]
             label_position = (x,y)
             cv2.putText(frame,label,label_position,cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
@@ -51,4 +74,4 @@ while True:
         break
 
 cap.release()
-# cv2.destroyAllWindows()
+cv2.destroyAllWindows()
