@@ -5,9 +5,9 @@ import pandas as pd
 import torch
 from face_dection import frame_prep
 import torch.nn.functional as F
-import stremlit as st
+# import streamlit as st
 import cv2
-
+# st.write('ncoasmvsd')
 modul, face_cascade, data_transform, emotion_dict = frame_prep()
 
 vs = cv2.VideoCapture(0,cv2.CAP_DSHOW)
@@ -40,6 +40,8 @@ while True:
         cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
         cv2.putText(img, face_text, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
         1.05, (0,255,0),2)
+        cv2.putText(img, "FAYYOZJON ", (x-50, y-50), cv2.FONT_HERSHEY_SIMPLEX,
+        1.05, (0,0,255),2)
     # frame_window.image(img)
     cv2.imshow('IMAGE', img)
     
